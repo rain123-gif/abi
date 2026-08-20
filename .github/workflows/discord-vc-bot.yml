@@ -1,0 +1,64 @@
+name: Discord Voice Bot
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check JavaScript syntax
+        run: npm run check
+
+      - name: Run bot for this session
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DISCORD_TOKEN:-}" ]; then
+            echo "::error::The DISCORD_TOKEN repository secret is missing."
+            exit 1
+          fi
+
+          cleanup() {
+            if [ -n "${BOT_PID:-}" ] && kill -0 "$BOT_PID" 2>/dev/null; then
+              kill "$BOT_PID" 2>/dev/null || true
+              wait "$BOT_PID" 2>/dev/null || true
+            fi
+          }
+
+          trap cleanup EXIT INT TERM
+
+          node index.js &
+          BOT_PID=$!
+
+          for i in $(seq 1 720); do
+            if ! kill -0 "$BOT_PID" 2>/dev/null; then
+              echo "::error::The bot process stopped before the six-hour session ended."
+              wait "$BOT_PID" || exit $?
+              exit 1
+            fi
+            sleep 30
+          done
+
+          echo "Six-hour bot session completed."
