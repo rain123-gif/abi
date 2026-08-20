@@ -19,13 +19,13 @@ bot.on("messageCreate", async (message) => {
   if (message.author.bot || !message.guild) return;
   const command = message.content.trim().toLowerCase();
 
-  if (command === ",leave") {
+  if (command === "aleave") {
     message.guild.members.me?.voice.disconnect();
     await message.reply("Umalis na ako sa voice channel.");
     return;
   }
 
-  if (command !== ",join" && command !== ",stay") return;
+  if (command !== "ajoin" && command !== "astay") return;
   const channel = message.member?.voice?.channel;
   if (!channel) return message.reply("Sumali ka muna sa voice channel.");
 
